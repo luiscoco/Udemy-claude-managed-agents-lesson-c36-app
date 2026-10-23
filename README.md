@@ -42,27 +42,69 @@ CLAUDE_MANAGED_ENVIRONMENT_ID=your_environment_id
 PORT=3036
 ```
 
-## How the application was developed
+## How the app was build
 
-The browser collects inputs; the Node host validates requests; the lesson implementation produces observable evidence. The architecture page walks through the real source with numbered steps, prerequisite configuration, source filenames and code excerpts.
+### 1. Validate the claimed score independently
 
-### Lesson implementation
+The claimed value must lie between zero and one. Valid score shape does not establish that the artifact meets the rubric.
 
-[src/lesson.ts](https://github.com/luiscoco/Udemy-claude-managed-agents-lesson-c36-app/blob/main/src/lesson.ts)
+Source: [src/lesson.ts](src/lesson.ts#L13) · selected statements
 
 ```typescript
-  async run(input) {
+const artifact = text(input, "artifact"),
+  score = number(input, "claimedScore"),
+  expectedHash = hash("Status: reviewed");
 
-const artifact=text(input,"artifact"),score=number(input,"claimedScore"),expectedHash=hash("Status: reviewed");
-if(score<0||score>1)throw new Error("Score must lie between zero and one");
-const artifactMatches=hash(artifact)===expectedHash;
-return report(artifactMatches?"passed":"rejected","Host grading checks the artifact rather than trusting a claimed score",{artifactMatches,claimedScore:score,actualHash:hash(artifact),expectedHash,hostScore:artifactMatches?1:0,nativeOutcome:"not invoked"},["Read the actual artifact bytes","Validate score shape","Compare with the independent fixture","Keep host grading distinct from a native verdict"]);
-
-  }
-};
+if (score < 0 || score > 1) throw new Error("Score must lie between zero and one");
 ```
 
-Read the architecture page for the remaining source excerpts and explanations, including input handling and optional provider behavior. The diagram describes this application, rather than implying that an external integration has been implemented.
+### 2. Grade the actual artifact bytes
+
+The host hashes the supplied artifact and compares it with the independent fixture. hostScore follows that match, even if the model claimed a different score; no native outcome grader is invoked.
+
+Source: [src/lesson.ts](src/lesson.ts#L15) · selected statements
+
+```typescript
+const artifactMatches = hash(artifact) === expectedHash;
+
+return report(
+  artifactMatches ? "passed" : "rejected",
+  "Host grading checks the artifact rather than trusting a claimed score",
+  {
+    artifactMatches,
+    claimedScore: score,
+    actualHash: hash(artifact),
+    expectedHash,
+    hostScore: artifactMatches ? 1 : 0,
+    nativeOutcome: "not invoked",
+  },
+  [
+    "Read the actual artifact bytes",
+    "Validate score shape",
+    "Compare with the independent fixture",
+    "Keep host grading distinct from a native verdict",
+  ],
+);
+```
+
+### Check your understanding
+
+Run **Accept matching artifact evidence** in the application. Compare the result with these scenario expectations:
+
+```json
+{
+  "input": {
+    "artifact": "Status: reviewed",
+    "claimedScore": 1
+  },
+  "expectedOutcome": "passed",
+  "checkEvidence": {
+    "artifactMatches": true
+  }
+}
+```
+
+Then try **Reject a confident but wrong artifact**. Its expected outcome is `rejected`; identify the condition or evidence field that explains the difference.
 
 ## Validation
 
