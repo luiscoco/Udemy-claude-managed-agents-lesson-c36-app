@@ -1,0 +1,28 @@
+{
+  "source": "live-provider-commentary",
+  "sessionId": "sesn_01UNHx4YST5cinw7tKv76DCe",
+  "answer": "This teaching experiment illustrates that a host grader validates outcomes by inspecting the actual artifact (comparing hashes) rather than accepting a self-reported score at face value. The artifact's hash matched the expected fixture, so the host awarded a score of 1. The native tool path was not invoked, keeping host grading independent from any claimed result.",
+  "stopReason": "end_turn",
+  "eventTypes": [
+    "session.status_running",
+    "session.thread_status_running",
+    "user.message",
+    "span.model_request_start",
+    "agent.message",
+    "span.model_request_end",
+    "session.thread_status_idle",
+    "session.usage",
+    "session.status_idle"
+  ],
+  "requestUsage": [
+    {
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "input_tokens": 677,
+      "output_tokens": 76,
+      "speed": "standard"
+    }
+  ],
+  "experimentHash": "c9a11a5dd1a466e32fd572dbf0d4290b2c65039adc84dc2da22a1f04f2bd5ea7",
+  "scope": "A real text-only model response about the local experiment. External integrations and the experiment's correctness are not certified by this response."
+}

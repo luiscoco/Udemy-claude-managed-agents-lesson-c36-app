@@ -1,0 +1,38 @@
+// Host rubric evaluation. No model calls run at module load.
+import { z } from "zod";
+import { createHash } from "node:crypto";
+import type Anthropic from "@anthropic-ai/sdk";
+const RubricScore = z.strictObject({
+  correctness: z.number().finite().min(0).max(10),
+  adherence: z.number().finite().min(0).max(10),
+  feedback: z.string().trim().min(1).max(4000)
+});
+export const hash = (bytes: Uint8Array) =>
+  createHash("sha256").update(bytes).digest("hex");
+// Caller obtains artifact bytes from the authorized run and the expected
+// digest from an independently reviewed fixture, never from the agent.
+export function gradeOutcome(raw: string, artifact: Uint8Array, expectedHash: string) {
+  if (!/^[a-f0-9]{64}$/.test(expectedHash)) throw new Error("Invalid fixture digest");
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); }
+  catch { return { status: "invalid" as const, passed: false, score: null, reason: "Malformed JSON" }; }
+  const checked = RubricScore.safeParse(parsed);
+  if (!checked.success)
+    return { status: "invalid" as const, passed: false, score: null, reason: "Invalid rubric schema" };
+  const { correctness, adherence, feedback } = checked.data;
+  const score = (correctness + adherence) / 2;
+  const artifactMatches = hash(artifact) === expectedHash;
+  return { status: "graded" as const, score, feedback, artifactMatches,
+    passed: artifactMatches && correctness >= 7 && score >= 7,
+    rubricVersion: "course-rubric-v1" };
+}
+export async function defineOutcome(client: Anthropic, authorizedSessionId: string) {
+  return client.beta.sessions.events.send(authorizedSessionId, { events: [{
+    type: "user.define_outcome",
+    description: "Create a short habitat survey report in the output folder.",
+    rubric: { type: "text", content: "# Survey rubric\n- Correctly identifies the habitat.\n- Separates observations from assumptions.\n- Includes a clear summary." },
+    max_iterations: 3
+  }] }, { maxRetries: 0, timeout: 10000 });
+}
+// Native outcome verdicts and this host score are distinct records.
+// Exact hashes suit fixed fixtures; use semantic checks for variable artifacts.
